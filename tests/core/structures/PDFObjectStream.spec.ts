@@ -48,7 +48,7 @@ describe(`PDFObjectStream`, () => {
     expect(
       String(PDFObjectStream.withContextAndObjects(context, objects, false)),
     ).toEqual(
-      '<<\n/Type /ObjStm\n/N 9\n/First 42\n/Length 108\n>>\n' +
+      '<<\n/Type /ObjStm\n/N 9\n/First 42\n/Length 126\n>>\n' +
         'stream\n' +
         '1 0 2 4 3 9 4 15 5 24 6 31 7 39 8 44 9 47 ' +
         '[ ]\n' +
@@ -71,7 +71,7 @@ describe(`PDFObjectStream`, () => {
         objects,
         false,
       ).sizeInBytes(),
-    ).toBe(172);
+    ).toBe(190);
   });
 
   it(`can be serialized`, () => {
@@ -83,10 +83,10 @@ describe(`PDFObjectStream`, () => {
     const buffer = new Uint8Array(stream.sizeInBytes() + 3).fill(
       toCharCode(' '),
     );
-    expect(stream.copyBytesInto(buffer, 2)).toBe(172);
+    expect(stream.copyBytesInto(buffer, 2)).toBe(190);
     expect(buffer).toEqual(
       typedArrayFor(
-        '  <<\n/Type /ObjStm\n/N 9\n/First 42\n/Length 108\n>>\n' +
+        '  <<\n/Type /ObjStm\n/N 9\n/First 42\n/Length 126\n>>\n' +
           'stream\n' +
           '1 0 2 4 3 9 4 15 5 24 6 31 7 39 8 44 9 47 ' +
           '[ ]\n' +
@@ -97,13 +97,13 @@ describe(`PDFObjectStream`, () => {
           '/QuxBaz\n' +
           'null\n' +
           '21\n' +
-          '(Stuff and thingz)\n' +
+          '(\xfe\xff\0S\0t\0u\0f\0f\0 \0a\0n\0d\0 \0t\0h\0i\0n\0g\0z)\n' +
           '\nendstream ',
       ),
     );
   });
 
-  it(`can be serialized when encoded`, () => {
+  it(`can be serialized when encoded, PDFObjectStream`, () => {
     const contents =
       '1 0 2 4 3 9 4 15 5 24 6 31 7 39 8 44 9 47 ' +
       '[ ]\n' +
@@ -114,8 +114,11 @@ describe(`PDFObjectStream`, () => {
       '/QuxBaz\n' +
       'null\n' +
       '21\n' +
-      '(Stuff and thingz)\n';
-    const encodedContents = pako.deflate(contents);
+      '(\xfe\xff\0S\0t\0u\0f\0f\0 \0a\0n\0d\0 \0t\0h\0i\0n\0g\0z)\n';
+    // FE and FF were splited into 2 bytes in pako.deflate("string"),
+    // convert to array to prevent the behavior before deflate.
+    const rawContents = contents.split('').map((i) => i.charCodeAt(0) & 0xff);
+    const encodedContents = pako.deflate(rawContents);
 
     const stream = PDFObjectStream.withContextAndObjects(
       context,
@@ -125,10 +128,11 @@ describe(`PDFObjectStream`, () => {
     const buffer = new Uint8Array(stream.sizeInBytes() + 3).fill(
       toCharCode(' '),
     );
-    expect(stream.copyBytesInto(buffer, 2)).toBe(195);
+    expect(stream.copyBytesInto(buffer, 2)).toBe(206);
     expect(buffer).toEqual(
       mergeIntoTypedArray(
-        '  <<\n/Filter /FlateDecode\n/Type /ObjStm\n/N 9\n/First 42\n/Length 110\n>>\n',
+        '  <<\n/Filter /FlateDecode\n/Type /ObjStm\n/N 9\n/First 42\n' +
+          '/Length 121\n>>\n',
         'stream\n',
         encodedContents,
         '\nendstream ',

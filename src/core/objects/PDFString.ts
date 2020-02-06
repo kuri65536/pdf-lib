@@ -1,6 +1,6 @@
 import PDFObject from 'src/core/objects/PDFObject';
 import CharCodes from 'src/core/syntax/CharCodes';
-import { copyStringIntoBuffer, padStart } from 'src/utils';
+import { padStart } from 'src/utils';
 
 class PDFString extends PDFObject {
   // The PDF spec allows newlines and parens to appear directly within a literal
@@ -34,14 +34,43 @@ class PDFString extends PDFObject {
   }
 
   sizeInBytes(): number {
-    return this.value.length + 2;
+    const escaped = (this.value.match(/\(|\)|\\/g) || []).length;
+    return this.value.length * 2 + 4 + escaped;
+  }
+
+  copyByteAndEscape(src: number, buffer: Uint8Array, offset: number): number {
+    let n = 0;
+    src = src & 0xff;
+    if (
+      src === CharCodes.LeftParen ||
+      src === CharCodes.RightParen ||
+      src === CharCodes.BackSlash
+    ) {
+      buffer[offset++] = CharCodes.BackSlash; // escape by backslash
+      n++;
+    }
+    buffer[offset++] = src;
+    return n + 1;
   }
 
   copyBytesInto(buffer: Uint8Array, offset: number): number {
+    let n = 3;
     buffer[offset++] = CharCodes.LeftParen;
-    offset += copyStringIntoBuffer(this.value, buffer, offset);
+    // decode string as UTF16BE (PDF spec 7.9.2.2
+    buffer[offset++] = CharCodes.BOM1; // BOM upper
+    buffer[offset++] = CharCodes.BOM2; // BOM lower
+    const src = this.value;
+    for (let i = 0; i < src.length; i++) {
+      const utf16code = src.charCodeAt(i);
+      const j = this.copyByteAndEscape(utf16code >> 8, buffer, offset);
+      offset += j;
+      n += j;
+      const k = this.copyByteAndEscape(utf16code, buffer, offset);
+      offset += k;
+      n += k;
+    }
     buffer[offset++] = CharCodes.RightParen;
-    return this.value.length + 2;
+    return n + 1;
   }
 }
 

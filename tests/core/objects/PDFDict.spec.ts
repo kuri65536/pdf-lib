@@ -85,12 +85,12 @@ describe(`PDFDict`, () => {
   });
 
   it(`can provide its size in bytes`, () => {
-    expect(pdfDict.sizeInBytes()).toBe(153);
+    expect(pdfDict.sizeInBytes()).toBe(161);
   });
 
   it(`can be serialized`, () => {
-    const buffer = new Uint8Array(157).fill(toCharCode(' '));
-    expect(pdfDict.copyBytesInto(buffer, 3)).toBe(153);
+    const buffer = new Uint8Array(165).fill(toCharCode(' '));
+    expect(pdfDict.copyBytesInto(buffer, 3)).toBe(161);
     expect(buffer).toEqual(
       typedArrayFor(
         `   <<
@@ -99,7 +99,7 @@ describe(`PDFDict`, () => {
 /Name /Foo#23Bar!
 /Null null
 /Number -24.179
-/String (foobar)
+/String (\xfe\xff\0f\0o\0o\0b\0a\0r)
 /Ref 21 92 R
 /Dictionary <<
 /Array [ true null ]

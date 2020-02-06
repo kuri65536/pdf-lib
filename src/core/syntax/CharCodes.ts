@@ -56,6 +56,9 @@ enum CharCodes {
   LeftCurly = 123,
   RightCurly = 125,
   Tilde = 126,
+
+  BOM1 = 254, // UTF-16BE order marker, page 86 of PDF32000.book
+  BOM2 = 255,
 }
 
 export default CharCodes;

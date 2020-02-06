@@ -26,7 +26,7 @@ describe(`PDFArray`, () => {
   const pdfName = PDFName.of('Foo#Bar!');
   const pdfNull = PDFNull;
   const pdfNumber = PDFNumber.of(-24.179);
-  const pdfString = PDFString.of('foobar');
+  const pdfString = PDFString.of('foobar'); // UTF16:4+6*2=16, +8
 
   const pdfSubDict = PDFDict.withContext(context);
   pdfSubDict.set(PDFName.of('Foo'), PDFName.of('Bar'));
@@ -106,15 +106,16 @@ describe(`PDFArray`, () => {
   });
 
   it(`can provide its size in bytes`, () => {
-    expect(pdfArray.sizeInBytes()).toBe(84);
+    expect(pdfArray.sizeInBytes()).toBe(92);
   });
 
   it(`can be serialized`, () => {
-    const buffer = new Uint8Array(88).fill(toCharCode(' '));
-    expect(pdfArray.copyBytesInto(buffer, 3)).toBe(84);
+    const buffer = new Uint8Array(96).fill(toCharCode(' '));
+    expect(pdfArray.copyBytesInto(buffer, 3)).toBe(92);
     expect(buffer).toEqual(
       typedArrayFor(
-        '   [ true <ABC123> /Foo#23Bar! null -24.179 (foobar) [ true <<\n/Foo /Bar\n>> ] 21 92 R ] ',
+        '   [ true <ABC123> /Foo#23Bar! null -24.179 ' +
+          '(\xfe\xff\0f\0o\0o\0b\0a\0r) [ true <<\n/Foo /Bar\n>> ] 21 92 R ] ',
       ),
     );
   });
